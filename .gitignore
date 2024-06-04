@@ -46,3 +46,7 @@ target/
 
 # Intellij IDEA
 out/
+
+# Project specific
+checkstyle.txt
+results.out
