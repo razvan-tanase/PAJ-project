@@ -16,6 +16,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 /**
  * The class reads and parses the data from the tests
@@ -67,65 +70,89 @@ public final class InputLoader {
         JSONArray jsonProducers = (JSONArray)
                 initialData.get(Constants.PRODUCERS);
 
-        if (jsonMonthlyUpdates != null) {
-            for (Object jsonMonthlyUpdate : jsonMonthlyUpdates) {
-                newConsumers.add(Utils.newConsumer((JSONArray) ((JSONObject) jsonMonthlyUpdate)
-                        .get(Constants.NEW_CONSUMERS)));
-                newDistributors.add(Utils.distributorCostChanges((JSONArray)
-                        ((JSONObject) jsonMonthlyUpdate).get(Constants.DIST_CHANGES)));
-                newProducers.add(Utils.producerCostChanges((JSONArray)
-                        ((JSONObject) jsonMonthlyUpdate).get(Constants.PRO_CHANGES)));
+        ExecutorService executorService = Executors.newFixedThreadPool(4);
+
+        // Parsing monthly updates in parallel
+        Future<?> monthlyUpdatesFuture = executorService.submit(() -> {
+            if (jsonMonthlyUpdates != null) {
+                for (Object jsonMonthlyUpdate : jsonMonthlyUpdates) {
+                    newConsumers.add(Utils.newConsumer((JSONArray) ((JSONObject) jsonMonthlyUpdate)
+                            .get(Constants.NEW_CONSUMERS)));
+                    newDistributors.add(Utils.distributorCostChanges((JSONArray)
+                            ((JSONObject) jsonMonthlyUpdate).get(Constants.DIST_CHANGES)));
+                    newProducers.add(Utils.producerCostChanges((JSONArray)
+                            ((JSONObject) jsonMonthlyUpdate).get(Constants.PRO_CHANGES)));
+                }
             }
+        });
+
+        // Parallel processing of consumers, distributors, and producers
+        Future<?> consumersFuture = executorService.submit(() -> {
+            if (jsonConsumers != null) {
+                for (Object jsonConsumer : jsonConsumers) {
+                    consumers.add(new Consumer(
+                            Integer.parseInt(((JSONObject) jsonConsumer).get(Constants.ID)
+                                    .toString()),
+                            Long.parseLong(((JSONObject) jsonConsumer)
+                                    .get(Constants.INITIAL_BUDGET).toString()),
+                            Long.parseLong(((JSONObject) jsonConsumer)
+                                    .get(Constants.MONTHLY_INCOME).toString())
+                    ));
+                }
+            }
+        });
+
+        Future<?> distributorsFuture = executorService.submit(() -> {
+            if (jsonDistributors != null) {
+                for (Object jsonDistributor : jsonDistributors) {
+                    distributors.add(new Distributor(
+                            Integer.parseInt(((JSONObject) jsonDistributor).get(Constants.ID)
+                                    .toString()),
+                            Integer.parseInt(((JSONObject) jsonDistributor).
+                                    get(Constants.CONTRACT_LENGTH).toString()),
+                            Long.parseLong(((JSONObject) jsonDistributor)
+                                    .get(Constants.INITIAL_BUDGET).toString()),
+                            Long.parseLong(((JSONObject) jsonDistributor)
+                                    .get(Constants.INIT_INFRA_COST).toString()),
+                            Long.parseLong(((JSONObject) jsonDistributor)
+                                    .get(Constants.ENERGY_NEEDED).toString()),
+                            factory.selectStrategy((String) ((JSONObject)
+                                    jsonDistributor).get(Constants.STRATEGY))
+                    ));
+                }
+            }
+        });
+
+        Future<?> producersFuture = executorService.submit(() -> {
+            if (jsonProducers != null) {
+                for (Object jsonProducer : jsonProducers) {
+                    producers.add(new Producer(
+                            Integer.parseInt(((JSONObject) jsonProducer).get(Constants.ID)
+                                    .toString()),
+                            Utils.stringToEnergy((String) ((JSONObject) jsonProducer)
+                                    .get(Constants.ENERGY_TYPE)),
+                            Long.parseLong(((JSONObject) jsonProducer)
+                                    .get(Constants.MAX_DISTRIBUTORS).toString()),
+                            Float.parseFloat(((JSONObject) jsonProducer)
+                                    .get(Constants.PRICE_KW).toString()),
+                            Long.parseLong(((JSONObject) jsonProducer)
+                                    .get(Constants.ENERGY_PER_DISTRIBUTOR).toString())
+                    ));
+                }
+            }
+        });
+
+        try {
+            monthlyUpdatesFuture.get();
+            consumersFuture.get();
+            distributorsFuture.get();
+            producersFuture.get();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
-        if (jsonConsumers != null) {
-            for (Object jsonConsumer : jsonConsumers) {
-                consumers.add(new Consumer(
-                        Integer.parseInt(((JSONObject) jsonConsumer).get(Constants.ID)
-                                .toString()),
-                        Long.parseLong(((JSONObject) jsonConsumer)
-                                .get(Constants.INITIAL_BUDGET).toString()),
-                        Long.parseLong(((JSONObject) jsonConsumer)
-                                .get(Constants.MONTHLY_INCOME).toString())
-                ));
-            }
-        }
+        executorService.shutdown();
 
-        if (jsonDistributors != null) {
-            for (Object jsonDistributor : jsonDistributors) {
-                distributors.add(new Distributor(
-                        Integer.parseInt(((JSONObject) jsonDistributor).get(Constants.ID)
-                                .toString()),
-                        Integer.parseInt(((JSONObject) jsonDistributor).
-                                get(Constants.CONTRACT_LENGTH).toString()),
-                        Long.parseLong(((JSONObject) jsonDistributor)
-                                .get(Constants.INITIAL_BUDGET).toString()),
-                        Long.parseLong(((JSONObject) jsonDistributor)
-                                .get(Constants.INIT_INFRA_COST).toString()),
-                        Long.parseLong(((JSONObject) jsonDistributor)
-                                .get(Constants.ENERGY_NEEDED).toString()),
-                        factory.selectStrategy((String) ((JSONObject)
-                                jsonDistributor).get(Constants.STRATEGY))
-                ));
-            }
-        }
-
-        if (jsonProducers != null) {
-            for (Object jsonProducer : jsonProducers) {
-                producers.add(new Producer(
-                        Integer.parseInt(((JSONObject) jsonProducer).get(Constants.ID)
-                                .toString()),
-                        Utils.stringToEnergy((String) ((JSONObject) jsonProducer).
-                                get(Constants.ENERGY_TYPE)),
-                        Long.parseLong(((JSONObject) jsonProducer)
-                                .get(Constants.MAX_DISTRIBUTORS).toString()),
-                        Float.parseFloat(((JSONObject) jsonProducer)
-                                .get(Constants.PRICE_KW).toString()),
-                        Long.parseLong(((JSONObject) jsonProducer)
-                                .get(Constants.ENERGY_PER_DISTRIBUTOR).toString())
-                ));
-            }
-        }
         return new Input(consumers, distributors, producers, newConsumers,
                 newDistributors, numberOfTurns, newProducers);
     }

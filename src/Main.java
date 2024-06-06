@@ -17,6 +17,9 @@ import java.io.File;
 import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 /**
  * Entry point to the simulation
@@ -45,6 +48,7 @@ public final class Main {
         List<List<Distributor>> newDistributors = input.getNewDistributors();
         List<List<Producer>> newProducers = input.getNewProducers();
         Accountant accountant = new Accountant();
+
         /*
           Start of round 0
           1. Distributors choose their producers and calculate their production cost
@@ -67,20 +71,33 @@ public final class Main {
               At the beginning of a normal round, I check if new consumers are added or if there
               are changes in distributors' costs
              */
-            if (!(newConsumers == null)) {
-                for (Consumer consumer : newConsumers.get(i)) {
-                    if (consumer != null) {
-                        consumerDB.addConsumer(consumer);
+            final int round = i;
+            ExecutorService executorService = Executors.newFixedThreadPool(2);
+
+            // Parallel processing of new consumers and distributors
+            Future<?> newConsumersFuture = executorService.submit(() -> {
+                if (newConsumers != null) {
+                    for (Consumer consumer : newConsumers.get(round)) {
+                        if (consumer != null) {
+                            consumerDB.addConsumer(consumer);
+                        }
                     }
                 }
-            }
-            if (!(newDistributors == null)) {
-                for (Distributor d : newDistributors.get(i)) {
-                    if (d != null) {
-                        distributorsDB.updateDistributor(d);
+            });
+
+            Future<?> newDistributorsFuture = executorService.submit(() -> {
+                if (newDistributors != null) {
+                    for (Distributor d : newDistributors.get(round)) {
+                        if (d != null) {
+                            distributorsDB.updateDistributor(d);
+                        }
                     }
                 }
-            }
+            });
+
+            // Synchronize on the previous futures to ensure they're complete
+            newConsumersFuture.get();
+            newDistributorsFuture.get();
 
             distributorsDB.updateContractsPrice();
             distributorsDB.removeContracts();
@@ -93,19 +110,24 @@ public final class Main {
             /*
             The end of a normal round
             */
-            if (!(newProducers == null)) {
-                for (Producer p : newProducers.get(i)) {
-                    if (p != null) {
-                        producersDB.updateProducers(p);
+            if (newProducers != null) {
+                executorService.submit(() -> {
+                    for (Producer p : newProducers.get(round)) {
+                        if (p != null) {
+                            producersDB.updateProducers(p);
+                        }
                     }
-                }
+                }).get();
             }
+
             /*
              All non-bankrupt distributors update their producers if necessary and
              calculate their production cost
             */
             distributorsDB.searchProducers(producersDB.getProducers());
             producersDB.updateMonthlyStats(i + 1);
+
+            executorService.shutdown();
         }
         /* END OF SIMULATION */
 
@@ -117,30 +139,45 @@ public final class Main {
         distributorsDB.mergeLists(accountant);
         producersDB.sortProducers();
 
-        /* Creates instances that will help me display in the output file */
-        List<Consumers> consumers = new ArrayList<>();
-        List<Distributors> distributors = new ArrayList<>();
-        List<EnergyProducers> energyProducers = new ArrayList<>();
+        ExecutorService executorService = Executors.newFixedThreadPool(3);
 
         /*
          Create objects that keep only the details that interest me
          from each consumer and distributor
          */
-        for (Consumer c : consumerDB.getConsumers()) {
-            consumers.add(new Consumers(c.getConsumerID(), c.getBlackList().isBankrupt(),
-                    c.getBudget()));
-        }
-        for (Distributor d : distributorsDB.getDistributors()) {
-            distributors.add(new Distributors(d.getId(), d.getEnergyNeededKW(),
-                    d.getContractPrice(), d.getBudget(), d.getProducerStrategy()
-                    .strategyToString(), d.isBankrupt(), d.getContracts()));
-        }
 
-        for (Producer p : producersDB.getProducers()) {
-            energyProducers.add(new EnergyProducers(p.getId(), p.getEnergyType(),
-                    p.getMaxDistributors(), p.getPriceKW(), p.getEnergyPerDistributor(),
-                    p.getMonthlyStats()));
-        }
+        Future<List<Consumers>> consumersFuture = executorService.submit(() -> {
+            List<Consumers> consumers1 = new ArrayList<>();
+            for (Consumer c : consumerDB.getConsumers()) {
+                consumers1.add(new Consumers(c.getConsumerID(), c.getBlackList().isBankrupt(), c.getBudget()));
+            }
+            return consumers1;
+        });
+
+        Future<List<Distributors>> distributorsFuture = executorService.submit(() -> {
+            List<Distributors> distributors1 = new ArrayList<>();
+            for (Distributor d : distributorsDB.getDistributors()) {
+                distributors1.add(new Distributors(d.getId(), d.getEnergyNeededKW(), d.getContractPrice(),
+                        d.getBudget(), d.getProducerStrategy().strategyToString(), d.isBankrupt(), d.getContracts()));
+            }
+            return distributors1;
+        });
+
+        Future<List<EnergyProducers>> energyProducersFuture = executorService.submit(() -> {
+            List<EnergyProducers> energyProducers1 = new ArrayList<>();
+            for (Producer p : producersDB.getProducers()) {
+                energyProducers1.add(new EnergyProducers(p.getId(), p.getEnergyType(), p.getMaxDistributors(),
+                        p.getPriceKW(), p.getEnergyPerDistributor(), p.getMonthlyStats()));
+            }
+            return energyProducers1;
+        });
+
+        /* Creates instances that will help me display in the output file */
+        List<Consumers> consumers = consumersFuture.get();
+        List<Distributors> distributors = distributorsFuture.get();
+        List<EnergyProducers> energyProducers = energyProducersFuture.get();
+
+        executorService.shutdown();
 
         /* Write to Output */
         OutputLoader outputLoader = new OutputLoader(consumers, distributors, energyProducers);
