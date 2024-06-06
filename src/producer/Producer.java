@@ -5,6 +5,7 @@ import entities.EnergyType;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * The entity that supplies energy to distributors
@@ -97,17 +98,15 @@ public final class Producer extends Provider {
 
     /**
      * Retrieve from the list of subscribers the ID of all distributors to whom it supplies energy
-     * in order to be able to update monthly statistics
+     * to be able to update monthly statistics
      *
      * @return List of IDs of distributors to whom it provides energy in the current month
      */
     public List<Integer> getSubscribersID() {
-        List<Integer> IDs = new ArrayList<>();
-        for (Subscriber subscriber : getSubscribers()) {
-            IDs.add(subscriber.getId());
-        }
-        IDs.sort(Integer::compareTo);
-        return IDs;
+        return getSubscribers().stream()
+                .map(Subscriber::getId)
+                .sorted()
+                .toList();
     }
 
     /**

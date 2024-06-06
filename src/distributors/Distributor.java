@@ -152,7 +152,7 @@ public final class Distributor implements Subscriber {
                 producer.subscribe(this);
                 contractedProducers.add(producer);
                 energyFound += producer.getEnergyPerDistributor();
-                cost += producer.getEnergyPerDistributor() * producer.getPriceKW();
+                cost += (long) (producer.getEnergyPerDistributor() * producer.getPriceKW());
             }
         }
 
@@ -191,7 +191,7 @@ public final class Distributor implements Subscriber {
     }
 
     /**
-     * It pays the monthly fees and if he has no money, he is declared bankrupt
+     * It pays the monthly fees, and if he has no money, he is declared bankrupt
      */
     public void calculateNewBudget() {
         budget -= getMonthlyExpenses();
@@ -222,7 +222,7 @@ public final class Distributor implements Subscriber {
      */
     public void updateContract() {
         long profit = Math.round(Math.floor(0.2 * productionCost));
-        if (contracts.size() != 0) {
+        if (!contracts.isEmpty()) {
             contractPrice = Math.round(Math.floor((float) infrastructureCost / contracts.size())
                     + productionCost + profit);
         } else {
@@ -231,19 +231,18 @@ public final class Distributor implements Subscriber {
     }
 
     /**
-     * The consumer is searched in the list of contracts by id and it is checked if the remaining
+     * The consumer is searched in the list of contracts by id, and it is checked if the remaining
      * payment months have reached 0
      *
      * @param consumerID The id after which a consumer will be searched in the list of contracts
      * @return True if the consumer no longer has to pay for that contract
      */
     public boolean searchContract(final int consumerID) {
-        for (Contracts contract : this.contracts) {
-            if (contract.getConsumerId() == consumerID) {
-                return contract.endOfContract();
-            }
-        }
-        return false;
+        return this.contracts.stream()
+                .filter(contract -> contract.getConsumerId() == consumerID)
+                .map(Contracts::endOfContract)
+                .findFirst()
+                .orElse(false);
     }
 
     /**

@@ -41,8 +41,6 @@ public class Provider {
      * Notify each subscriber distributor that changes have occurred
      */
     public void notifySubscribers() {
-        for (Subscriber subscriber : subscribers) {
-            subscriber.update();
-        }
+        subscribers.forEach(Subscriber::update);
     }
 }

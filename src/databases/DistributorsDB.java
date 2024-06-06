@@ -30,11 +30,9 @@ public final class DistributorsDB {
      * @param distributor Distributor with changed costs
      */
     public void updateDistributor(final Distributor distributor) {
-        for (Distributor d : distributors) {
-            if (d.getId() == distributor.getId()) {
-                d.setInfrastructureCost(distributor.getInfrastructureCost());
-            }
-        }
+        distributors.stream()
+                .filter(d -> d.getId() == distributor.getId())
+                .forEach(d -> d.setInfrastructureCost(distributor.getInfrastructureCost()));
     }
 
     /**
@@ -44,33 +42,27 @@ public final class DistributorsDB {
      * @param producers List of all manufacturers that will be selected to purchase energy
      */
     public void searchProducers(final List<Producer> producers) {
-        Comparator<Distributor> comparator1 = Comparator.comparing(Distributor::getId);
-        distributors.sort(comparator1);
-        for (Distributor d : distributors) {
-            if (d.getProductionCost() == 0) {
-                d.executeStrategy(producers);
-            }
-        }
+        distributors.stream()
+                .sorted(Comparator.comparing(Distributor::getId))
+                .filter(d -> d.getProductionCost() == 0)
+                .forEach(d -> d.executeStrategy(producers));
     }
 
     /**
      * @return The distributor with the cheapest contract
      */
     public Distributor getCheapestContract() {
-        Comparator<Distributor> comparator = Comparator.comparing(Distributor::getId);
-        distributors.sort(comparator);
-        Comparator<Distributor> comparator1 = Comparator.comparing(Distributor::getContractPrice);
-        distributors.sort(comparator1);
-        return distributors.get(0);
+        return distributors.stream()
+                .sorted(Comparator.comparing(Distributor::getId))
+                .min(Comparator.comparing(Distributor::getContractPrice))
+                .orElse(null);
     }
 
     /**
      * Pay the taxes for all distributors
      */
     public void payAllRates() {
-        for (Distributor distributor : distributors) {
-            distributor.calculateNewBudget();
-        }
+        distributors.forEach(Distributor::calculateNewBudget);
     }
 
     /**
@@ -78,9 +70,7 @@ public final class DistributorsDB {
      * The new contracts are calculated according to how many consumers each distributor has
      */
     public void updateContractsPrice() {
-        for (Distributor distributor : distributors) {
-            distributor.updateContract();
-        }
+        distributors.forEach(Distributor::updateContract);
     }
 
     /**
@@ -94,7 +84,7 @@ public final class DistributorsDB {
 
     /**
      * Each distributor will be checked for bankruptcy, and those in question will have
-     * their contracts deleted and the consumers with whom they concluded will be notified
+     * their contracts deleted, and the consumers with whom they concluded will be notified
      * that they must find a new distributor for the next round.
      * Manufacturers who supply it with energy will also be notified to remove it from the
      * list of subscribers
@@ -104,20 +94,21 @@ public final class DistributorsDB {
      * @param accountant Keeps track of bankrupt distributors
      */
     public void removeBankrupts(final Accountant accountant) {
-        for (Distributor distributor : distributors) {
-            if (distributor.isBankrupt()) {
-                Consumer consumer = accountant.getConsumer(distributor);
-                if (consumer != null) {
-                    consumer.setMonthlyExpenses(0);
-                }
-                accountant.addBankrupt(distributor);
-                distributor.getContracts().clear();
-                for (Producer p : distributor.getContractedProducers()) {
-                    p.unsubscribe(distributor);
-                }
+        List<Distributor> bankruptDistributors = distributors.stream()
+                .filter(Distributor::isBankrupt)
+                .toList();
+
+        for (Distributor distributor : bankruptDistributors) {
+            Consumer consumer = accountant.getConsumer(distributor);
+            if (consumer != null) {
+                consumer.setMonthlyExpenses(0);
             }
+            accountant.addBankrupt(distributor);
+            distributor.getContracts().clear();
+            distributor.getContractedProducers().forEach(producer -> producer.unsubscribe(distributor));
         }
-        distributors.removeIf(Distributor::isBankrupt);
+
+        distributors.removeAll(bankruptDistributors);
     }
 
     /**
@@ -127,7 +118,6 @@ public final class DistributorsDB {
      */
     public void mergeLists(final Accountant accountant) {
         distributors.addAll(accountant.getBankruptDistributors());
-        Comparator<Distributor> comparator = Comparator.comparing(Distributor::getId);
-        distributors.sort(comparator);
+        distributors.sort(Comparator.comparing(Distributor::getId));
     }
 }

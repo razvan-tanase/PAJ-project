@@ -95,32 +95,54 @@ public final class Consumer {
      */
     public void payRate(final Distributor distributor, final Accountant accountant) {
         getSalary();
+
         if (blackList.isPotentialBankrupt()) {
-            long penaltyBill = calculatePenalty();
-            long totalBill = penaltyBill + monthlyExpenses;
-            if (budget >= totalBill) {
-                hasMoney(distributor, true);
-            } else {
-                if (distributor.getId() == blackList.getOldDistributor().getId()) {
-                    noMoney(accountant, true);
-                } else {
-                    if (budget >= penaltyBill) {
-                        budget -= penaltyBill;
-                        blackList.getOldDistributor().getRate(penaltyBill);
-                        blackList.setOverduePayment(monthlyExpenses);
-                    } else {
-                        noMoney(accountant, true);
-                    }
-                }
-            }
+            handlePotentialBankruptcy(distributor, accountant);
         } else {
-            if (budget >= monthlyExpenses) {
-                hasMoney(distributor, false);
-            } else {
-                noMoney(accountant, false);
-            }
+            handleRegularPayment(distributor, accountant);
         }
+
         checkEndOfContract(distributor, blackList.isPotentialBankrupt());
+    }
+
+    /**
+     * Handles the payment process when the consumer is potentially bankrupt.
+     * Checks if the consumer can pay the total bill (penalty + monthly expenses),
+     * and updates the distributor or accountant accordingly.
+     *
+     * @param distributor The distributor to whom the consumer must pay the monthly installment
+     * @param accountant  Specifies to the consumer to whom to pay the monthly installment
+     */
+    private void handlePotentialBankruptcy(final Distributor distributor, final Accountant accountant) {
+        long penaltyBill = calculatePenalty();
+        long totalBill = penaltyBill + monthlyExpenses;
+
+        if (budget >= totalBill) {
+            hasMoney(distributor, true);
+        } else if (distributor.getId() == blackList.getOldDistributor().getId()) {
+            noMoney(accountant, true);
+        } else if (budget >= penaltyBill) {
+            budget -= penaltyBill;
+            blackList.getOldDistributor().getRate(penaltyBill);
+            blackList.setOverduePayment(monthlyExpenses);
+        } else {
+            noMoney(accountant, true);
+        }
+    }
+
+    /**
+     * Handles the regular payment process when the consumer is not potentially bankrupt.
+     * Checks if the consumer can pay the monthly expenses, and updates the distributor or accountant accordingly.
+     *
+     * @param distributor The distributor to whom the consumer must pay the monthly installment
+     * @param accountant  Specifies to the consumer to whom to pay the monthly installment
+     */
+    private void handleRegularPayment(final Distributor distributor, final Accountant accountant) {
+        if (budget >= monthlyExpenses) {
+            hasMoney(distributor, false);
+        } else {
+            noMoney(accountant, false);
+        }
     }
 
     /**

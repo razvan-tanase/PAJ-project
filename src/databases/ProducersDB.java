@@ -29,12 +29,12 @@ public final class ProducersDB {
      * @param producer Producer with changed energy
      */
     public void updateProducers(final Producer producer) {
-        for (Producer p : producers) {
-            if (p.getId() == producer.getId()) {
-                p.setEnergyPerDistributor(producer.getEnergyPerDistributor());
-                p.notifySubscribers();
-            }
-        }
+        producers.stream()
+                .filter(p -> p.getId() == producer.getId())
+                .forEach(p -> {
+                    p.setEnergyPerDistributor(producer.getEnergyPerDistributor());
+                    p.notifySubscribers();
+                });
     }
 
     /**
@@ -43,17 +43,14 @@ public final class ProducersDB {
      * @param currentMonth Round that is simulated at the current time
      */
     public void updateMonthlyStats(final int currentMonth) {
-        for (Producer p : producers) {
-            p.updateMonthlyStats(currentMonth);
-        }
+        producers.forEach(p -> p.updateMonthlyStats(currentMonth));
     }
 
     /**
-     * Sorts the producers by ID so that they can be passed in the correct order in
+     * Sort the producers by ID so that they can be passed in the correct order in
      * the output files
      */
     public void sortProducers() {
-        Comparator<Producer> comparator = Comparator.comparing(Producer::getId);
-        producers.sort(comparator);
+        producers.sort(Comparator.comparing(Producer::getId));
     }
 }

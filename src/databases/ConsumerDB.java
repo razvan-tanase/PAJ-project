@@ -38,20 +38,16 @@ public final class ConsumerDB {
      * @param accountant  Notes the distributor with whom a consumer has signed
      */
     public void signNewContracts(final Distributor distributor, final Accountant accountant) {
-        for (Consumer consumer : consumers) {
-            if (distributor.accept(consumer)) {
-                accountant.addNewContract(consumer, distributor);
-            }
-        }
+        consumers.stream()
+                .filter(distributor::accept)
+                .forEach(consumer -> accountant.addNewContract(consumer, distributor));
     }
 
     /**
      * @param accountant Indicates to the consumer whose distributor must pay
      */
     public void payAllRates(final Accountant accountant) {
-        for (Consumer consumer : consumers) {
-            consumer.payRate(accountant.searchDistributor(consumer), accountant);
-        }
+        consumers.forEach(consumer -> consumer.payRate(accountant.searchDistributor(consumer), accountant));
     }
 
     /**
@@ -62,12 +58,13 @@ public final class ConsumerDB {
      * @param accountant Indicates to the consumer whose distributor must pay
      */
     public void removeBankrupts(final Accountant accountant) {
-        for (Consumer consumer : consumers) {
-            if (consumer.getBlackList().isBankrupt()) {
-                Distributor currentDist = accountant.searchDistributor(consumer);
-                currentDist.removeBankruptContract(consumer.getConsumerID());
-            }
-        }
+        consumers.stream()
+                .filter(consumer -> consumer.getBlackList().isBankrupt())
+                .forEach(consumer -> {
+                    Distributor currentDist = accountant.searchDistributor(consumer);
+                    currentDist.removeBankruptContract(consumer.getConsumerID());
+                });
+
         consumers.removeIf(consumer -> consumer.getBlackList().isBankrupt());
     }
 
@@ -78,7 +75,6 @@ public final class ConsumerDB {
      */
     public void mergeLists(final Accountant accountant) {
         consumers.addAll(accountant.getBankruptConsumers());
-        Comparator<Consumer> comparator = Comparator.comparing(Consumer::getConsumerID);
-        consumers.sort(comparator);
+        consumers.sort(Comparator.comparing(Consumer::getConsumerID));
     }
 }

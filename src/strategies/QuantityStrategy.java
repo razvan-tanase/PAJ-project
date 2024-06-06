@@ -8,9 +8,9 @@ import java.util.List;
 public final class QuantityStrategy implements MarketStrategy {
     @Override
     public List<Producer> execute(final List<Producer> producers) {
-        Comparator<Producer> comparator1 = Comparator.comparing(Producer::getEnergyPerDistributor);
-        producers.sort(comparator1.reversed());
-        return producers;
+        return producers.stream()
+                .sorted(Comparator.comparing(Producer::getEnergyPerDistributor).reversed())
+                .toList();
     }
 
     @Override

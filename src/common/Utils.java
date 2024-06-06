@@ -7,11 +7,11 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import producer.Producer;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.IntStream;
 
 /**
- * The class contains static methods that helps with parsing
+ * The class contains static methods that help with parsing
  */
 public final class Utils {
     /**
@@ -28,18 +28,14 @@ public final class Utils {
         if (consumer == null) {
             return null;
         } else {
-            List<Consumer> list = new ArrayList<>();
-            for (Object object : consumer) {
-                list.add(new Consumer(
-                        Integer.parseInt(((JSONObject) object).get(Constants.ID)
-                                .toString()),
-                        Long.parseLong(((JSONObject) object).get(Constants.INITIAL_BUDGET)
-                                .toString()),
-                        Long.parseLong(((JSONObject) object).get(Constants.MONTHLY_INCOME)
-                                .toString())
-                ));
-            }
-            return list;
+            return IntStream.range(0, consumer.size())
+                    .mapToObj(i -> (JSONObject) consumer.get(i))
+                    .map(jsonObject -> new Consumer(
+                            Integer.parseInt(jsonObject.get(Constants.ID).toString()),
+                            Long.parseLong(jsonObject.get(Constants.INITIAL_BUDGET).toString()),
+                            Long.parseLong(jsonObject.get(Constants.MONTHLY_INCOME).toString())
+                    ))
+                    .toList();
         }
     }
 
@@ -54,16 +50,13 @@ public final class Utils {
         if (distributor == null) {
             return null;
         } else {
-            List<Distributor> list = new ArrayList<>();
-            for (Object object : distributor) {
-                list.add(new Distributor(
-                        Integer.parseInt(((JSONObject) object).get(Constants.ID)
-                                .toString()),
-                        Long.parseLong(((JSONObject) object).get(Constants.INFRA_COST)
-                                .toString())
-                ));
-            }
-            return list;
+            return IntStream.range(0, distributor.size())
+                    .mapToObj(i -> (JSONObject) distributor.get(i))
+                    .map(jsonObject -> new Distributor(
+                            Integer.parseInt(jsonObject.get(Constants.ID).toString()),
+                            Long.parseLong(jsonObject.get(Constants.INFRA_COST).toString())
+                    ))
+                    .toList();
         }
     }
 
@@ -78,21 +71,18 @@ public final class Utils {
         if (producer == null) {
             return null;
         } else {
-            List<Producer> list = new ArrayList<>();
-            for (Object object : producer) {
-                list.add(new Producer(
-                        Integer.parseInt(((JSONObject) object).get(Constants.ID)
-                                .toString()),
-                        Long.parseLong(((JSONObject) object).get(Constants.ENERGY_PER_DISTRIBUTOR)
-                                .toString())
-                ));
-            }
-            return list;
+            return IntStream.range(0, producer.size())
+                    .mapToObj(i -> (JSONObject) producer.get(i))
+                    .map(jsonObject -> new Producer(
+                            Integer.parseInt(jsonObject.get(Constants.ID).toString()),
+                            Long.parseLong(jsonObject.get(Constants.ENERGY_PER_DISTRIBUTOR).toString())
+                    ))
+                    .toList();
         }
     }
 
     /**
-     * @param energy Energy type of a producer found as a string in input files
+     * @param energy Energy type of producer found as a string in input files
      * @return An enum corresponding to the string
      */
     public static EnergyType stringToEnergy(final String energy) {

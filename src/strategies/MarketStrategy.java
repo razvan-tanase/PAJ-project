@@ -5,7 +5,7 @@ import producer.Producer;
 import java.util.List;
 
 /**
- * This interface is used to implement strategy design pattern
+ * This interface is used to implement a strategy design pattern
  */
 public interface MarketStrategy {
     /**

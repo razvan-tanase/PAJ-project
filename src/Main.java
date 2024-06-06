@@ -49,7 +49,7 @@ public final class Main {
           Start of round 0
           1. Distributors choose their producers and calculate their production cost
           2. Distributors calculate the initial cost of their contracts
-          3. Every initial consumer sign their first contracts
+          3. Initial consumers sign their first contracts
           4. Consumers pay their rates to distributors.
           5. Distributors pay their rates
          */

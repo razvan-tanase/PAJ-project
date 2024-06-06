@@ -62,13 +62,10 @@ public final class Accountant {
      * @return The related consumer
      */
     public Consumer getConsumer(final Distributor distributor) {
-        for (Map.Entry<Consumer, Distributor> entry : agenda.entrySet()) {
-            // if give value is equal to value from entry
-            // print the corresponding key
-            if (entry.getValue() == distributor) {
-                return entry.getKey();
-            }
-        }
-        return null;
+        return agenda.entrySet().stream()
+                .filter(entry -> entry.getValue().equals(distributor))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(null);
     }
 }
