@@ -19,7 +19,7 @@ public class Provider {
         this.subscribers = new ArrayList<>();
     }
 
-    final List<Subscriber> getSubscribers() {
+    public final List<Subscriber> getSubscribers() {
         return subscribers;
     }
 

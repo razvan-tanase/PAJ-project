@@ -1,7 +1,7 @@
 package strategies;
 
 /**
- * This interface is used to implement factory and singleton design pattern
+ * This interface is used to implement a factory and singleton design pattern
  */
 public final class StrategyFactory {
     private static StrategyFactory instance;

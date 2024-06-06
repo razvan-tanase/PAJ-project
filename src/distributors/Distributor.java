@@ -46,7 +46,7 @@ public final class Distributor implements Subscriber {
     /**
      * The list of contracts concluded with consumers
      */
-    private List<Contracts> contracts;
+    private final List<Contracts> contracts;
     /**
      * The financial situation of a distributor
      */
@@ -54,7 +54,7 @@ public final class Distributor implements Subscriber {
     /**
      * List of manufacturers that supply current energy
      */
-    private List<Producer> contractedProducers;
+    private final List<Producer> contractedProducers;
 
     public Distributor(final int id, final int contractLength, final long budget,
                        final long infrastructureCost, final long energyNeededKW,
@@ -74,18 +74,30 @@ public final class Distributor implements Subscriber {
     public Distributor(final int id, final long infrastructureCost) {
         this.id = id;
         this.infrastructureCost = infrastructureCost;
+        this.contracts = new ArrayList<>();
+        this.contractedProducers = new ArrayList<>();
+    }
+
+    public Distributor(final int id, final long infrastructureCost, final MarketStrategy producerStrategy) {
+        this.id = id;
+        this.infrastructureCost = infrastructureCost;
+        this.producerStrategy = producerStrategy;
+        this.contracts = new ArrayList<>();
+        this.contractedProducers = new ArrayList<>();
     }
 
     public int getId() {
         return id;
     }
 
-    public int getContractLength() {
-        return contractLength;
-    }
+    public int getContractLength() { return contractLength; }
 
     public long getBudget() {
         return budget;
+    }
+
+    public void setBudget(long budget) {
+        this.budget = budget;
     }
 
     public long getInfrastructureCost() {
@@ -108,12 +120,20 @@ public final class Distributor implements Subscriber {
         return contractPrice;
     }
 
+    public void setContractPrice(final long contractPrice) {
+        this.contractPrice = contractPrice;
+    }
+
     public List<Contracts> getContracts() {
         return contracts;
     }
 
     public void setInfrastructureCost(final long infrastructureCost) {
         this.infrastructureCost = infrastructureCost;
+    }
+
+    public void setBankrupt(boolean bankrupt) {
+        this.bankrupt = bankrupt;
     }
 
     public boolean isBankrupt() {
@@ -169,9 +189,7 @@ public final class Distributor implements Subscriber {
      *                  its new energy supplier
      */
     public void executeStrategy(final List<Producer> producers) {
-        for (Producer p : contractedProducers) {
-            p.unsubscribe(this);
-        }
+        contractedProducers.forEach(p -> p.unsubscribe(this));
         contractedProducers.clear();
         productionCost = calculateProductionCost(producerStrategy.execute(producers));
     }

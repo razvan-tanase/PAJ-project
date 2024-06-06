@@ -31,10 +31,10 @@ public final class ConsumerDB {
     }
 
     /**
-     * All consumers go visit the cheapest distributor to sign a contract if they dont have
+     * All consumers go visit the cheapest distributor to sign a contract if they don't have
      * one already and the accountant notes at which one he went to
      *
-     * @param distributor The cheapest distributor for whom the consumer can signs a new contract
+     * @param distributor The cheapest distributor for whom the consumer can sign a new contract
      * @param accountant  Notes the distributor with whom a consumer has signed
      */
     public void signNewContracts(final Distributor distributor, final Accountant accountant) {
