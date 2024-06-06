@@ -77,9 +77,7 @@ public final class DistributorsDB {
      * Each distributor will eliminate the concluded contracts
      */
     public void removeContracts() {
-        for (Distributor distributor : distributors) {
-            distributor.removeFinishedContracts();
-        }
+        distributors.forEach(Distributor::removeFinishedContracts);
     }
 
     /**

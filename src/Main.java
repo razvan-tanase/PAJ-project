@@ -111,13 +111,11 @@ public final class Main {
             The end of a normal round
             */
             if (newProducers != null) {
-                executorService.submit(() -> {
-                    for (Producer p : newProducers.get(round)) {
-                        if (p != null) {
-                            producersDB.updateProducers(p);
-                        }
+                for (Producer p : newProducers.get(i)) {
+                    if (p != null) {
+                        producersDB.updateProducers(p);
                     }
-                }).get();
+                }
             }
 
             /*
